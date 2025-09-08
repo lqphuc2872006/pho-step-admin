@@ -1,202 +1,260 @@
 <template>
   <div class="container-fluid py-5">
-    <h1 class="fs-4 fw-bold text-primary mb-5 text-center">Chỉnh Sửa Đợt Giảm Giá</h1>
+    <h1 class="fs-4 fw-bold text-primary mb-5 text-center">Thêm Phiếu Giảm Giá Mới</h1>
 
     <div class="card shadow-sm border-0 p-4">
       <div class="loading-spinner" v-if="loading"></div>
       <div :class="{ 'loading-overlay': loading }">
-        <CForm @submit.prevent="saveChanges">
-          <!-- Mã đợt giảm giá -->
-          <div class="mb-4">
-            <CFormLabel for="maDotGiamGia" class="fw-semibold">Mã Đợt Giảm Giá</CFormLabel>
-            <CFormInput id="maDotGiamGia" v-model="campaign.maDotGiamGia" disabled class="custom-input" />
+        <!-- Mã phiếu -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Mã phiếu giảm giá</label>
+          <div class="d-flex align-items-center gap-3">
+            <CFormInput v-model="coupon.maPhieuGiamGia" type="text" class="custom-input" />
+            <CButton class="btn-outline-secondary" @click="generateCode">Tự sinh</CButton>
           </div>
+        </div>
 
-          <!-- Tên đợt giảm giá -->
-          <div class="mb-4">
-            <CFormLabel for="tenDotGiamGia" class="fw-semibold">Tên Đợt Giảm Giá</CFormLabel>
-            <CFormInput id="tenDotGiamGia" v-model="campaign.tenDotGiamGia" required class="custom-input" />
-          </div>
+        <!-- Tên phiếu -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Tên phiếu giảm giá</label>
+          <CFormInput v-model="coupon.tenPhieuGiamGia" type="text" class="custom-input" />
+        </div>
 
-          <!-- Giá trị giảm -->
-          <div class="mb-4">
-            <CFormLabel for="giaTri" class="fw-semibold">Giá Trị (%)</CFormLabel>
-            <CFormInput id="giaTri" v-model.number="campaign.giaTri" type="number" required class="custom-input" min="0" max="100" />
-          </div>
+        <!-- Loại giảm giá -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Loại giảm giá</label>
+          <CFormSelect v-model="coupon.loaiGiamGia" class="custom-select" @change="handleLoaiGiamGiaChange">
+            <option disabled value="">-- Chọn --</option>
+            <option value="PHAN_TRAM">Phần trăm</option>
+            <option value="SO_TIEN_CO_DINH">Số tiền cố định</option>
+          </CFormSelect>
+        </div>
 
-          <!-- Thời gian bắt đầu -->
-          <div class="mb-4">
-            <CFormLabel for="thoiGianBatDau" class="fw-semibold">Thời Gian Bắt Đầu</CFormLabel>
-            <CFormInput id="thoiGianBatDau" v-model="campaign.thoiGianBatDau" type="datetime-local" required class="custom-input" />
-          </div>
+        <!-- Giá trị giảm -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">{{ labelGiaTriGiam }}</label>
+          <CFormInput v-model.number="coupon.giaTriGiam" type="number" class="custom-input" />
+        </div>
 
-          <!-- Thời gian kết thúc -->
-          <div class="mb-4">
-            <CFormLabel for="thoiGianKetThuc" class="fw-semibold">Thời Gian Kết Thúc</CFormLabel>
-            <CFormInput id="thoiGianKetThuc" v-model="campaign.thoiGianKetThuc" type="datetime-local" required class="custom-input" />
-          </div>
+        <!-- Số tiền giảm tối đa -->
+        <div class="mb-4" v-if="coupon.loaiGiamGia === 'PHAN_TRAM'">
+          <label class="form-label fw-semibold">Số tiền giảm tối đa</label>
+          <CFormInput v-model.number="coupon.soTienGiamToiDa" type="number" class="custom-input" />
+        </div>
 
-          <!-- Trạng thái -->
-          <div class="mb-4">
-            <CFormLabel for="trangThai" class="fw-semibold">Trạng Thái</CFormLabel>
-            <CFormSelect id="trangThai" v-model="campaign.trangThai" required class="custom-select">
-              <option value="Đang diễn ra">Đang diễn ra</option>
-              <option value="Đã kết thúc">Đã kết thúc</option>
-            </CFormSelect>
-          </div>
+        <!-- Hóa đơn tối thiểu -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Hóa đơn tối thiểu</label>
+          <CFormInput v-model.number="coupon.hoaDonToiThieu" type="number" class="custom-input" />
+        </div>
 
-          <!-- Nút hành động -->
-          <div class="d-flex justify-content-end gap-2">
-            <CButton type="submit" class="btn-primary">Lưu Thay Đổi</CButton>
-            <CButton class="btn-outline-secondary" @click="cancelEdit">Hủy</CButton>
+        <!-- Ngày bắt đầu -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Ngày bắt đầu</label>
+          <CFormInput v-model="coupon.ngayBatDau" type="datetime-local" class="custom-input" />
+        </div>
+
+        <!-- Ngày kết thúc -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Ngày kết thúc</label>
+          <CFormInput v-model="coupon.ngayKetThuc" type="datetime-local" class="custom-input" />
+        </div>
+
+        <!-- Loại áp dụng -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Loại áp dụng</label>
+          <CFormSelect v-model="coupon.loaiApDung" class="custom-select" @change="handleLoaiApDungChange">
+            <option disabled value="">-- Chọn --</option>
+            <option value="TOAN_BO">Toàn bộ</option>
+            <option value="KH_CU_THE">Khách hàng cụ thể</option>
+          </CFormSelect>
+        </div>
+
+        <!-- Bảng khách hàng -->
+        <div v-if="showCustomerTable" class="mb-4">
+          <h5 class="fw-semibold mb-3">Chọn khách hàng áp dụng</h5>
+          <div class="table-container">
+            <table class="custom-table">
+              <thead>
+                <tr>
+                  <th class="text-center">Chọn</th>
+                  <th class="text-center">Tên khách hàng</th>
+                  <th class="text-center">Email</th>
+                  <th class="text-center">SĐT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="customers.length === 0">
+                  <td colspan="4" class="text-center py-4">Không có khách hàng nào để hiển thị.</td>
+                </tr>
+                <tr v-for="kh in customers" :key="kh.id">
+                  <td class="text-center">
+                    <input type="checkbox" v-model="selectedCustomers" :value="kh.id" />
+                  </td>
+                  <td class="text-center">{{ kh.tenKhachHang }}</td>
+                  <td class="text-center">{{ kh.email }}</td>
+                  <td class="text-center">{{ kh.soDienThoai }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-        </CForm>
+        </div>
+
+        <!-- Nút submit -->
+        <CButton class="btn-primary w-100" @click="submitForm">Thêm Phiếu Giảm Giá</CButton>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { CForm, CFormInput, CFormLabel, CFormSelect, CButton } from '@coreui/vue';
-import { inject, ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { CFormInput, CFormSelect, CButton } from '@coreui/vue';
 import axios from 'axios';
+import { inject } from 'vue';
+import { useRouter } from 'vue-router';
 
 export default {
-  name: 'CouponEditForm',
+  name: 'CouponAdditionForm',
   components: {
-    CForm,
     CFormInput,
-    CFormLabel,
     CFormSelect,
     CButton,
   },
   setup() {
     const toast = inject('$toast');
-    const route = useRoute();
     const router = useRouter();
-
-    const campaign = ref({
-      maDotGiamGia: null,
-      tenDotGiamGia: '',
-      giaTri: 0,
-      thoiGianBatDau: '',
-      thoiGianKetThuc: '',
-      trangThai: '',
-    });
-    const loading = ref(true);
-    const campaignId = route.params.id;
-
-    const formatDateForInput = (dateTimeString) => {
-      if (!dateTimeString) return '';
-      const date = new Date(dateTimeString);
-      if (isNaN(date.getTime())) return '';
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return { toast, router };
+  },
+  data() {
+    return {
+      coupon: {
+        maPhieuGiamGia: '',
+        tenPhieuGiamGia: '',
+        giaTriGiam: null,
+        hoaDonToiThieu: null,
+        soTienGiamToiDa: null,
+        ngayBatDau: '',
+        ngayKetThuc: '',
+        loaiGiamGia: '',
+        loaiApDung: '',
+      },
+      customers: [],
+      selectedCustomers: [],
+      showCustomerTable: false,
+      loading: false,
     };
-
-    const formatDateForBackend = (dateTimeString) => {
-      if (!dateTimeString) return null;
-      const date = new Date(dateTimeString);
-      return date.toISOString();
-    };
-
-    const fetchCampaignDetails = async () => {
-      loading.value = true;
+  },
+  computed: {
+    labelGiaTriGiam() {
+      return this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH' ? 'Giá trị giảm (VND)' : 'Giá trị giảm (%)';
+    },
+  },
+  methods: {
+    generateCode() {
+      this.coupon.maPhieuGiamGia = 'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    },
+    handleLoaiGiamGiaChange() {
+      if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
+        this.coupon.soTienGiamToiDa = null;
+      }
+    },
+    async handleLoaiApDungChange() {
+      if (this.coupon.loaiApDung === 'KH_CU_THE') {
+        this.showCustomerTable = true;
+        await this.fetchCustomers();
+      } else {
+        this.showCustomerTable = false;
+        this.selectedCustomers = [];
+      }
+    },
+    async fetchCustomers() {
+      this.loading = true;
       try {
-        const response = await axios.get(`/api/dot-giam-gia/${campaignId}`);
-        const data = response.data;
-        campaign.value = {
-          ...data,
-          thoiGianBatDau: formatDateForInput(data.thoiGianBatDau),
-          thoiGianKetThuc: formatDateForInput(data.thoiGianKetThuc),
-        };
-      } catch (error) {
-        console.error('Lỗi khi tải chi tiết đợt giảm giá:', error);
-        if (toast) {
-          toast.error(`Không thể tải chi tiết đợt giảm giá: ${error.message || 'Lỗi không xác định'}`);
+        const res = await axios.get('/api/khach-hang');
+        this.customers = Array.isArray(res.data) ? res.data : res.data.content || [];
+      } catch (err) {
+        console.error('Lỗi tải khách hàng:', err);
+        if (this.toast) {
+          this.toast.error(`Không thể tải danh sách khách hàng: ${err.message || 'Lỗi không xác định'}`);
         }
-        router.push({ name: 'DotGiamGia' });
       } finally {
-        loading.value = false;
+        this.loading = false;
       }
-    };
-
-    const validateForm = () => {
-      if (!campaign.value.tenDotGiamGia.trim()) {
-        toast.error('Tên đợt giảm giá không được để trống!');
+    },
+    validateForm() {
+      if (!this.coupon.maPhieuGiamGia.trim()) {
+        this.toast.error('Mã phiếu giảm giá không được để trống!');
         return false;
       }
-      if (!campaign.value.giaTri || campaign.value.giaTri < 0 || campaign.value.giaTri > 100) {
-        toast.error('Giá trị giảm phải từ 0 đến 100 (%)!');
+      if (!this.coupon.tenPhieuGiamGia.trim()) {
+        this.toast.error('Tên phiếu giảm giá không được để trống!');
         return false;
       }
-      if (!campaign.value.thoiGianBatDau || !campaign.value.thoiGianKetThuc) {
-        toast.error('Ngày bắt đầu và ngày kết thúc không được để trống!');
+      if (!this.coupon.loaiGiamGia) {
+        this.toast.error('Vui lòng chọn loại giảm giá!');
         return false;
       }
-      if (new Date(campaign.value.thoiGianKetThuc) <= new Date(campaign.value.thoiGianBatDau)) {
-        toast.error('Ngày kết thúc phải sau ngày bắt đầu!');
+      if (this.coupon.loaiGiamGia === 'PHAN_TRAM') {
+        if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0 || this.coupon.giaTriGiam > 100) {
+          this.toast.error('Giá trị giảm phải từ 1 đến 100 (%)!');
+          return false;
+        }
+        if (!this.coupon.soTienGiamToiDa || this.coupon.soTienGiamToiDa <= 0) {
+          this.toast.error('Số tiền giảm tối đa phải lớn hơn 0!');
+          return false;
+        }
+      }
+      if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
+        if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0) {
+          this.toast.error('Giá trị giảm (VND) phải lớn hơn 0!');
+          return false;
+        }
+      }
+      if (this.coupon.hoaDonToiThieu !== null && this.coupon.hoaDonToiThieu < 0) {
+        this.toast.error('Hóa đơn tối thiểu không được nhỏ hơn 0!');
         return false;
       }
-      if (!campaign.value.trangThai) {
-        toast.error('Vui lòng chọn trạng thái!');
+      if (!this.coupon.ngayBatDau || !this.coupon.ngayKetThuc) {
+        this.toast.error('Vui lòng chọn ngày bắt đầu và ngày kết thúc!');
+        return false;
+      }
+      if (this.coupon.ngayBatDau >= this.coupon.ngayKetThuc) {
+        this.toast.error('Ngày bắt đầu phải nhỏ hơn ngày kết thúc!');
         return false;
       }
       return true;
-    };
-
-    const saveChanges = async () => {
-      if (!validateForm()) return;
-      loading.value = true;
+    },
+    async submitForm() {
+      if (!this.validateForm()) return;
+      this.loading = true;
       try {
-        const payload = {
-          ...campaign.value,
-          thoiGianBatDau: formatDateForBackend(campaign.value.thoiGianBatDau),
-          thoiGianKetThuc: formatDateForBackend(campaign.value.thoiGianKetThuc),
+        const formatDateTime = (dt) => (dt ? dt + ':00' : null);
+        const dataToSend = {
+          ...this.coupon,
+          ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
+          ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
+          customerIds: this.selectedCustomers,
         };
-        const response = await axios.put(`/api/dot-giam-gia/${campaign.value.maDotGiamGia}`, payload);
-        if (response.status === 200) {
-          if (toast) {
-            toast.success('Cập nhật đợt giảm giá thành công!');
+        const res = await axios.post('/api/phieu-giam-gia/create', dataToSend);
+        if (res.status === 201) {
+          if (this.toast) {
+            this.toast.success('Thêm phiếu giảm giá thành công!');
           }
-          router.push({ name: 'DotGiamGia' });
+          this.router.push({ name: 'PhieuGiamGia' });
         }
-      } catch (error) {
-        console.error('Lỗi khi cập nhật đợt giảm giá:', error);
-        if (toast) {
-          toast.error(`Không thể cập nhật đợt giảm giá: ${error.message || 'Lỗi không xác định'}`);
+      } catch (err) {
+        let errorMessage = 'Đã xảy ra lỗi khi thêm phiếu giảm giá.';
+        if (err.response && err.response.data && err.response.data.message) {
+          errorMessage = err.response.data.message;
         }
+        if (this.toast) {
+          this.toast.error(errorMessage);
+        }
+        console.error('Lỗi thêm phiếu:', err.response || err);
       } finally {
-        loading.value = false;
+        this.loading = false;
       }
-    };
-
-    const cancelEdit = () => {
-      router.push({ name: 'DotGiamGia' });
-    };
-
-    onMounted(() => {
-      if (campaignId) {
-        fetchCampaignDetails();
-      } else {
-        if (toast) {
-          toast.error('Không tìm thấy ID đợt giảm giá để chỉnh sửa.');
-        }
-        router.push({ name: 'DotGiamGia' });
-      }
-    });
-
-    return {
-      campaign,
-      loading,
-      saveChanges,
-      cancelEdit,
-    };
+    },
   },
 };
 </script>
@@ -268,6 +326,43 @@ export default {
   border-color: #d1d5db;
 }
 
+.table-container {
+  position: relative;
+  overflow-x: auto;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.custom-table th,
+.custom-table td {
+  padding: 1rem;
+  vertical-align: middle;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.custom-table th {
+  background-color: #0052cc;
+  color: #ffffff;
+  text-align: center;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.custom-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.custom-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .loading-overlay {
   opacity: 0.5;
   pointer-events: none;
@@ -315,6 +410,12 @@ export default {
   .btn-outline-secondary {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
+  }
+
+  .custom-table th,
+  .custom-table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
   }
 }
 </style>
